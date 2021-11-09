@@ -1,19 +1,20 @@
+#######################################################
 # make this project more bite-sized for the GH servers
-data/html_DL_in_*
-data/word_bags/*
-data/patent_level_info/*
-inputs_admin/*
-inputs/bad*
-inputs/Pat_Text_*
-outputs (from code folder)/*
-code 2017/*
-code 2021-05 py27 and 37/*
-*/admin/*
+#######################################################
+
+# output files are too big for git shipping
+outputs*
+data/*
+inputs*
+
+# old code is in local folders called "code 2017" eg
+code */*
 */dev/*
+*/admin/*
 
-# not ready for public consumption
-#gsutils
-
+#######################################################
+# std stuff
+#######################################################
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

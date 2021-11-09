@@ -5,6 +5,57 @@ Created on Thu Oct 28 10:10:46 2021
 @author: deb219
 """
 
+def set_up_onetime():
+    '''
+    Sets up the directory struture and gets the files you need where you need
+    them!
+    
+    Downloads four files:
+
+    1. `bad_ocr_words.csv` 
+    	- Words that only exist in the patent corpus before 1976, assumed to be 
+          bad OCR words, and will drop from corpus.
+    	- Assembled for Bowen, Fresard and Hoberg Forthcoming.
+    	- Will keep static for backward compatibility because updating will 
+          alter set of stopwords.
+    2. `nber_CURRENT.csv` - the nber 1 digit code for patents
+    3. `pat_dates_CURRENT.csv` - the nber 1 digit code for patents
+    4. `word_index.csv` - words found in patents, and a corresponding integer 
+        (the "word_index") representing that word 
+    	
+    The first file will never change. After you use the code to update the 
+    patent corpus, the other three files will update as well.
+    '''
+    
+    import os
+    import urllib.request 
+    import zipfile
+
+    url = 'https://www.dropbox.com/s/ad5hs23x918u9p7/Pat_Text_Vars_StarterInputs.zip?dl=1'    
+    
+    if not os.path.exists('../data/word_bags/'): # don't run if we've already downloaded!
+    
+        # set up directory structure
+        os.makedirs('../data/patent_level_info/',exist_ok=True)
+        os.makedirs('../data/word_bags/descriptONLY/wordspace',exist_ok=True)
+        os.makedirs('../inputs/',exist_ok=True)    
+        
+        # download zip
+        print('Downloading initial word_index and other large inputs...')
+        urllib.request.urlretrieve(url, "inputs.zip")    
+    
+        # extract and place files
+        with zipfile.ZipFile("inputs.zip","r") as zip_ref:
+            zip_ref.extract("bad_ocr_words.csv",     path='../inputs/')
+            zip_ref.extract("word_index.csv",        path='../data/word_bags/')
+            zip_ref.extract("nber_CURRENT.csv",      path='../data/patent_level_info/')
+            zip_ref.extract("pat_dates_CURRENT.csv", path='../data/patent_level_info/')
+    
+        # delete the zip download
+        
+        os.remove("inputs.zip")
+
+
 def update_pat_dates(max_year=2020,min_year=2000,
                      gyear_url = 'https://s3.amazonaws.com/data.patentsview.org/download/patent.tsv.zip',
                      ayear_url = 'https://s3.amazonaws.com/data.patentsview.org/download/application.tsv.zip'):
@@ -686,8 +737,10 @@ def clean_bags(list_of_years):
     
     Inputs:
         
-        1. word_index.csv, all the word bags, 
-        2. ../inputs/ files (patent dates and bad_ocr_words )
+        1. word_index.csv, 
+        2. all the word bags, 
+        3. bad_ocr_words.csv
+        4. pat_dates_CURRENT.csv
         
     Key outputs are in data/words_bags/descriptONLY/wordspace:
         
@@ -712,6 +765,9 @@ def clean_bags(list_of_years):
         are identical except for the inclusion of a small fraction of patents that
         weren't available when the original data collection was done, and patents
         granted after the original parse whose application dates are pre-2010. 
+        
+        Additionally, adding new patents to a year could change the 
+        potential_stopwords, which would alter the cleaned bags somewhat. 
         
     """
     
@@ -790,10 +846,12 @@ def clean_bags(list_of_years):
         # print(yyyy," ",len(new_pat_dates.query('ayear == @yyyy')))
         
         # load (raw) pat word bags this year (long process!)
+        
         pnums = new_pat_dates.query('ayear == @yyyy').pnum.to_list()
         batch_pats = pd.concat(map(pd_concat_subfunc, pnums))
         
         # add the stopwords from this year to potential_stopwords
+        
         n_pats = batch_pats.pnum.nunique()    
         piv = batch_pats.groupby('word_index')['pnum'].count().reset_index()
         piv.columns = ['word_index','frac']
@@ -822,11 +880,7 @@ def clean_bags(list_of_years):
                                index=False)
 
     
-    
-    
-    
-        
-        
+      
 def make_RETech(outf,beg=1910,end=2010):
     '''
     Parameters
@@ -1000,7 +1054,6 @@ def delete_recent_raw_bags():
     for f in delete_these:
         os.remove(f)    
  
-
 
     
 
