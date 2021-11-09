@@ -17,8 +17,12 @@ necessary on my Windows machine to install cchardet and get the full benefits.
 to finish 
 
     while_clean_bags()
-        breadth() 
-        A function to convert patent level variables into group-time variables (e.g. firm-year, state-year, MSA-quarter)
+        code/aggregate_measures.do - 
+            function to convert patent level variables into group-time variables (e.g. firm-year, state-year, MSA-quarter)
+            stock(groupvar,timevar,lookback,perioddeprecrate)
+            rollingstats from our robustness
+        prep website 
+        prep bfh / ms folder 
 
     after clean_bags()
         delete the call to clean_bags() below
@@ -42,7 +46,8 @@ to finish
         delete E/data/fake 
         call this whole directory E:/data/Patent-Text-Vars, update gitdesktop link
     
-import GPGutils, os
+import GPGutils
+import os
 
 GPGutils.set_up_onetime()         # initialize directory structure, download needed files
 
@@ -64,11 +69,11 @@ if os.path.exists('../'+output_dir_name+'/'):
     print('overwrite existing prior outputs')
 else:
     
-    GPGutils.make_RETech('../'+output_dir_name+'/RETech.csv')  
+    GPGutils.make_RETech('../'+output_dir_name+'/RETech.csv',end=2017)  
     
     # TODO comp to prior
     
-    GPGutils.make_breadth('../'+output_dir_name+'/Breadth.csv')     
+    GPGutils.make_breadth('../'+output_dir_name+'/Breadth.csv',end=2017)     
     
     GPGutils.ship_outputs(in1='../'+output_dir_name+'/RETech.csv',
                           in2='../'+output_dir_name+'/Breadth.csv',
