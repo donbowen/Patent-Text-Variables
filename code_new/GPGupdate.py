@@ -16,30 +16,32 @@ necessary on my Windows machine to install cchardet and get the full benefits.
 
 to finish 
 
-    clean_bags()
-    delete the call to clean_bags() below
-    update updated initial data in inputs/Pat_Text_Vars_StarterInputs.zip, copy to 
-        dropbox, then to the public folder for easy DL, and if the link 
-        changes, update url in set_up() 
-    rename this cd as "code", update gitignore
-    ship commits
-    update Patent-Text-Vars-private-dev with final code, but less important
-    delete E/data/fake 
-    call this whole directory E:/data/Patent-Text-Vars, update gitdesktop link
+    while_clean_bags()
+        breadth() 
+        A function to convert patent level variables into group-time variables (e.g. firm-year, state-year, MSA-quarter)
+
+    after clean_bags()
+        delete the call to clean_bags() below
+        update updated initial data in inputs/Pat_Text_Vars_StarterInputs.zip, copy to 
+            dropbox, then to the public folder for easy DL, and if the link 
+            changes, update url in set_up() 
+        rename this cd as "code", update gitignore
+        check if parse(), from new downloads of pre- and post 1976 patent, 
+        
+            matches description bag for pre-1976 patent   
+            matches description bag for post-1976 patent   (maybe these include abstract?)
+                basically, for the 2014 switch, do we need to remove the abs/claims part
+            >>> Might need a switch inside that! or to remove parts. 
+        
+        ship commits
+        retech()
+        breadth()
+        ship(update to use ship_outputs param), copy csv to dropbox, then into existing shared file 
+        update link in readme to the new patent data if 
+        
+        delete E/data/fake 
+        call this whole directory E:/data/Patent-Text-Vars, update gitdesktop link
     
-    
-    create E:/Patent-Text-Vars-private-dev
-        put the old code (plus make_bag) in that
-        rename the GPG repo to Patent-Text-Vars-private-dev
-        sync     
-    readme for user points to dl (copy from other repo), describes use, asks or cite (no details on code!)
-
-
-
-
-
-
-
 import GPGutils, os
 
 GPGutils.set_up_onetime()         # initialize directory structure, download needed files
@@ -70,5 +72,5 @@ else:
     
     GPGutils.ship_outputs(in1='../'+output_dir_name+'/RETech.csv',
                           in2='../'+output_dir_name+'/Breadth.csv',
-                          out='../'+output_dir_name+'/Pat_text_vars.csv'
+                          out='../'+output_dir_name+'/Pat_text_vars_NotWinsored.csv'
                       ) # merge and output

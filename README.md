@@ -1,4 +1,4 @@
-# Patent Text Variables s
+# Patent Text Variables
 
 This folder creates and contains the data from Rapidly Evolving Technologies and Startup Exits ([SSRN link](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3245839)) by [Donald Bowen](https://bowen.finance), [Gerard Hoberg](http://www-bcf.usc.edu/~hoberg/), and [Laurent Fresard](https://people.lu.usi.ch/fresal/), which is forthcoming in Management Science. _Please cite that study when using or referring to any data or code in this repository._ 
 
@@ -7,7 +7,7 @@ This folder creates and contains the data from Rapidly Evolving Technologies and
 <p align="center"> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:  
 	<br> <br> 
 	<b> To download a patent-level dataset with RETech and text-based Tech Breadth: </b>
-	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables"><b>Click this link, which covers patents granted through last year!</b></a>
+	<br><br>   <a href="https://www.dropbox.com/s/ke1307sle4gg1h1/Pat_text_vars_NotWinsored.zip?dl=1"><b>Click this link, which covers patents granted through last year!</b></a>
 	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:   
 </p>
 
@@ -22,9 +22,9 @@ This folder creates and contains the data from Rapidly Evolving Technologies and
 ## Code to obtain and use patent text 
 
 The `code` folder includes code to 
-- Download all google patent pages 
-- Parse the _**descriptions**_ sections of patent text in those webpages into "bags of words" and then clean them. 
-- Construct textual variables at the patent level
+- Download all google patent pages. 
+- Parse the _**descriptions**_ sections of patent text in those webpages into "bags of words" and then clean them. We use descriptions to avoid legalese in the claims section. _Note: Google does not cleanly separate the abstract, claims, and description sections, so all three sections are included for such patents.
+- Construct textual variables at the patent level.
 - Convert patent level variables into group-time variables (e.g. firm-year, state-year, MSA-quarter), especially where stocking is important. 
 
 This code is designed to make it easy to update annually and easy to add additional variable definitions, and we will push changes to the key "parsing" and "update_bags" functions if Google updates their HTML. 
