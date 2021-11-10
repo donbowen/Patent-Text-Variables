@@ -40,7 +40,7 @@ update_from = 2010
 update_to   = 2020
 
 # The latest app year to compute retech/breadth. 
-# I usually lag given examination/approval lags
+# I usually omit last three years given median approval speed at USPTO
 output_to   = update_to-3                           
 
 ##########################
@@ -54,13 +54,15 @@ import os
 GPGutils.set_up_onetime()         
 
 # get numbers/dates of new grants since last run
+# check the output file for issues/to see how many new patents since last run! 
 GPGutils.update_pat_dates()       
 
 # get nber class for those grants (needed for breadth)
+# manually verify output (ie it should cover all patents)
 GPGutils.update_pat_nber_class()  
 
 # DL, parse to raw bags, clean into annual bags 
-GPGutils.update_bags(update_from,update_to)  
+GPGutils.update_bags(update_from,update_to)  # do last 5 to 10 years to cover any new patent grants that were in examination a long time
 
 # create the measures and stitch together
 if os.path.exists('../'+output_dir+'/'):
