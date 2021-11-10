@@ -32,13 +32,16 @@ within dir! If you cloned/downloaded the repo, this is taken care of.
 # and i'm not doing a GLFS workaround
 # so I store them in folders with the date of the update (oh yeah...)
 
-output_dir = 'outputs 2021-11' # update to new me each update to save 
-                                    # prior outputs (for error checks, etc)
+output_dir  = 'outputs 2021-11' # update to new me each update to save 
+                                # prior outputs (for error checks, etc)
 
-update_from = 2010        # get DLs and parse files in these application years
+# get DLs and parse files in these application years
+update_from = 2010        
 update_to   = 2020
-output_to   = update_to-3 # The latest app year to compute retech/breadth. 
-                          # I usually lag given examination/approval lags
+
+# The latest app year to compute retech/breadth. 
+# I usually lag given examination/approval lags
+output_to   = update_to-3                           
 
 ##########################
 # OK, LET'S DO THIS
@@ -69,7 +72,7 @@ else:
         
     GPGutils.make_breadth('../'+output_dir+'/Breadth.csv',end=output_to)     
     
-    GPGutils.ship_outputs(in_retech='../'+output_dir+'/RETech.csv',
+    GPGutils.ship_outputs(in_retech ='../'+output_dir+'/RETech.csv',
                           in_breadth='../'+output_dir+'/Breadth.csv',
                           outf=      '../'+output_dir+'/Pat_text_vars_NotWinsored.csv'
-                      ) # merge and output
+                      ) 

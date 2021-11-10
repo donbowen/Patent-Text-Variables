@@ -6,25 +6,22 @@ This folder creates and contains the data from Rapidly Evolving Technologies and
 
 <p align="center"> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:  
 	<br> <br> 
-	<b> To download a patent-level dataset with RETech and text-based Tech Breadth: </b>
+	<b> To download a patent-level dataset with RETech and Tech Breadth: </b>
 	<br><br>   <a href="https://www.dropbox.com/s/15fhp766li4olmz/Pat_text_vars_NotWinsored.zip?dl=1"><b>Click this link, which covers patents granted through last year!</b></a>
 	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:   
 </p>
 
 ---
 	
-## Important usage notes 
+## Important notes for using the data
 
 1. The dataset above contains raw values (i.e. not winsorized) and we recommend winsorizing by application year before using them.
-2. We generally recommend using the data above by _**application**_ year to match the timing of the innovation best. When doing so, note that the most recent three years will be incomplete, as applications in _\[t-3, t\]_ are sometimes not granted by the current year given examination and approval delays. 
-	
+2. We generally recommend using the data above by _**application**_ year to match the timing of the innovation best. When doing so, note that the most recent three years will be incomplete, as applications in _\[t-3, t\]_ are sometimes not granted by the current year given examination and approval delays.
+3. **`code/aggregate_measures.do` contains several Stata functions to convert patent-level variables into group-time variables (e.g. firm-year, state-year, MSA-quarter).** We include the stocking function from our paper, which gets the group's average patent stats over the prior five years, after applying a 20% rate of depreciation. 
+ 	
 Please see the paper for details on the construction of the measures. Questions can be directed to Donald Bowen, and pointers to errors or omissions, and corrections are welcome. 	
-		
-## Code to use the variables 
-
-`code/aggregate_measures.do` contains several Stata functions to convert patent-level variables into group-time variables (e.g. firm-year, state-year, MSA-quarter). We include the stocking function from our paper, which gets the group's average patent stats over the prior five years, after applying a 20% rate of depreciation. 
-		
-## Code to obtain and create variables from patent text 
+				
+## Code to obtain and create variables from patent text yourself 
 
 The `code` folder includes code (`GPGupdate.py`) to 
 - Download all google patent pages. 

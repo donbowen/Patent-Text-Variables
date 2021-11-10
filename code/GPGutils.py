@@ -514,7 +514,7 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
     
     for y in range(min_year,max_year+1):
         
-        # %%% WITHING YEAR Y, DOWNLOAD NEW PATENTS 
+        # %%% WITHIN YEAR Y, DOWNLOAD NEW PATENTS 
         
         print('year',y)
         
@@ -572,13 +572,7 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
                     
                     with open(word_index_fname,"w",newline='') as f_csv:
                         out_csv = csv.writer(f_csv, delimiter=',',quoting=csv.QUOTE_NONNUMERIC)
-                        out_csv.writerows(word_index.items())  
-                        
-            #             pd.DataFrame.from_dict(word_index,orient='index',
-            #                          columns=['word_index','count'])
-                        
-            # .to_csv(pnum_count_path,index=False,header=False)
-
+                        out_csv.writerows(word_index.items())                     
                         
                     with open(failure_fname,"wb") as f_csv:
                         out_csv = csv.writer(f_csv, delimiter=',',quoting=csv.QUOTE_NONNUMERIC)
@@ -618,6 +612,9 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
 
 def parse_HTML(pnum,year_of_DL):
     '''
+    Parses one patent's HTML. year_of_DL indicates the location of the file 
+    and tells this function which set of parsing rules to use (which is based
+    on the HTML structure google used in a given year)
     '''
  
     import lxml, cchardet # speed! leave, these are actually used 
