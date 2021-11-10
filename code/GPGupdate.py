@@ -61,6 +61,8 @@ GPGutils.update_pat_dates()
 # manually verify output (ie it should cover all patents)
 GPGutils.update_pat_nber_class()  
 
+# before proceeding, check that google hasn't changed the HTML tags needed by parse_HTML()
+# currently, description text is in: <section id="description">
 # DL, parse to raw bags, clean into annual bags 
 GPGutils.update_bags(update_from,update_to)  # do last 5 to 10 years to cover any new patent grants that were in examination a long time
 
