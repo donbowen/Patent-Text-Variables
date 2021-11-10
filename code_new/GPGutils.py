@@ -919,7 +919,7 @@ def make_RETech(outf,beg=1910,end=2010):
 
     big_RETech = pd.DataFrame() # we will store results in this           
         
-    for yyyy in trange(beg-1,end+1): 
+    for yyyy in trange(beg-1,end+1,desc='Making RETech...'): 
         
         # keep the last year's agg vector around to create deltas
         # ie what was z(t) from last step in this loop is now z(t-1)

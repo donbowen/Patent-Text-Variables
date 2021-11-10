@@ -2,15 +2,19 @@
 # make this project more bite-sized for the GH servers
 #######################################################
 
+# just ship the code,
 # output files are too big for git shipping
-outputs*
+
 data/*
 inputs*
-
-# old code is in local folders called "code 2017" eg
-code */*
-*/dev/*
+outputs*
 */admin/*
+*/dev/*
+
+# old code is in local folders called "code 2017" with a space
+
+code *
+
 
 #######################################################
 # std stuff
