@@ -982,101 +982,113 @@ def make_RETech(outf,beg=1910,end=2010):
     big_RETech.to_csv(outf,index=False)   
 
 def make_breadth(outf,beg=1910,end=2017):
-    '''
-    '''
-    
+	'''
+	'''
+	
 	from tqdm import trange
 	import pandas as pd
 	import numpy as np
 	import os
-
+	
 	coarse_class = pd.read_csv('../data/patent_level_info/nber_CURRENT.csv',)
 	coarse_class.columns = ['pnum','coarse'] # to match the legacy var names below...
 	
-    big_breadth = pd.DataFrame() # we will store results in this      
-    
-    for yyyy in trange(beg,end+1,desc='Creating Breadth...'): #1929,2011
+	big_breadth = pd.DataFrame() # we will store results in this      
+	
+	for yyyy in trange(beg,end+1,desc='Creating Breadth...'): #1929,2011
+		
+		# load cleaned bagOwords and merge in bfh_codes
+		
+		batchdir = '../data/word_bags/descriptONLY/bags_cleaned_annualbatch_by_ayear/'
+		
+		bagOwords = pd.read_csv(batchdir + 'bag_ayear_'+str(yyyy)+'.csv',)
+		bagOwords.columns = ['pnum','word_index','nwords']
+		
+		# get the word specializations
+		
+		spec = (bagOwords.merge(coarse_class,how='inner',on='pnum')
+		
+				# for each word-cat combo, count the number of pats and total word count
+				
+				.groupby(['word_index','coarse'])
+				.agg(ccnt=('coarse','count'),ncnt=('nwords','sum'))        # ncnt = # times that word is in those patents, ccnt = number of cats the 
+				
+				# how many more times is a word used in one cat than the next most common cat? 
+				
+				.reset_index().sort_values(['word_index','ncnt','ccnt'])
+				.assign(ng = lambda x: x.groupby('word_index')['ncnt'].pct_change(),
+						cg = lambda x: x.groupby('word_index')['ccnt'].pct_change(),
+						)
+				
+				# pct_change puts Nan in the first row of group
+				# put 1 in the first row instead of nan, so that one-cat 
+				# words survive the query below (it's specialized!) 
+				
+				.assign(ng = lambda x: x.ng.fillna(1), 
+						cg = lambda x: x.cg.fillna(1), 
+						)
+				
+				# keep the most common category for a word and call a word specialized
+				# if the most common cat is 50% more used (# words & # of pats) 
+				# than the second place cat.
+				# also require a word to be used in 10+ pats to be specialized 
+				
+				.groupby('word_index').tail(1)            
+				.query('ng >= .5 & cg >= .5 & ccnt >= 10')
+				
+				[['word_index','coarse']]            
+					
+				)
+		
+		# compute patent level breadth
+		
+		breadth = (bagOwords.merge(spec,how='inner',on='word_index')
+				# get the pat-class word counts 
+				.groupby(['pnum','coarse'])['nwords'].sum().reset_index()
+					
+				# HHI: convert counts to SQUARED shares,
+				.assign(tot     = lambda x: x.groupby('pnum').nwords.transform(sum),
+						shares2 = lambda x: (x.nwords/x.tot)**2)             
+					
+				.groupby('pnum',as_index=False)['shares2'].sum()    
+							
+				)
+		breadth['breadth'] = 1 - breadth['shares2']
+		breadth.drop('shares2',axis=1,inplace=True)
+		
+		# add to the main
+		
+		big_breadth = big_breadth.append(breadth)
+		
+	# done with loop
+	
+	big_breadth.to_csv(outf,index=False)
 
-        # load cleaned bagOwords and merge in bfh_codes
-        
-        batchdir = '../data/word_bags/descriptONLY/bags_cleaned_annualbatch_by_ayear/'
-
-        bagOwords = pd.read_csv(batchdir + 'bag_ayear_'+str(yyyy)+'.csv',)
-        bagOwords.columns = ['pnum','word_index','nwords']
-        
-        # get the word specializations
-        
-        spec = (bagOwords.merge(coarse_class,how='inner',on='pnum')
-         
-                # for each word-cat combo, count the number of pats and total word count
-                
-                .groupby(['word_index','coarse'])
-                .agg(ccnt=('coarse','count'),ncnt=('nwords','sum'))        # ncnt = # times that word is in those patents, ccnt = number of cats the 
-                
-                # how many more times is a word used in one cat than the next most common cat? 
-                
-                .reset_index().sort_values(['word_index','ncnt','ccnt'])
-                .assign(ng = lambda x: x.groupby('word_index')['ncnt'].pct_change(),
-                        cg = lambda x: x.groupby('word_index')['ccnt'].pct_change(),
-                        )
-                
-                # pct_change puts Nan in the first row of group
-                # put 1 in the first row instead of nan, so that one-cat 
-                # words survive the query below (it's specialized!) 
-                
-                .assign(ng = lambda x: x.ng.fillna(1), 
-                        cg = lambda x: x.cg.fillna(1), 
-                        )
-                
-                # keep the most common category for a word and call a word specialized
-                # if the most common cat is 50% more used (# words & # of pats) 
-                # than the second place cat.
-                # also require a word to be used in 10+ pats to be specialized 
-                
-                .groupby('word_index').tail(1)            
-                .query('ng >= .5 & cg >= .5 & ccnt >= 10')
-                
-                [['word_index','coarse']]            
-                    
-                )
-        
-        # compute patent level breadth
-        
-        breadth = (bagOwords.merge(spec,how='inner',on='word_index')
-                   # get the pat-class word counts 
-                   .groupby(['pnum','coarse'])['nwords'].sum().reset_index()
-                    
-                   # HHI: convert counts to SQUARED shares,
-                   .assign(tot     = lambda x: x.groupby('pnum').nwords.transform(sum),
-                           shares2 = lambda x: (x.nwords/x.tot)**2)             
-                    
-                   .groupby('pnum',as_index=False)['shares2'].sum()    
-                             
-                   )
-        breadth['breadth'] = 1 - breadth['shares2']
-        breadth.drop('shares2',axis=1,inplace=True)
-        
-        # add to the main
-        
-        big_breadth = big_breadth.append(breadth)
-
-    # done with loop
-
-    big_breadth.to_csv(outf,index=False)
 
 
 def ship_outputs(in_retech,in_breadth,outf):
+    '''
+    Inputs are paths to the input and output file names. 
+    '''
    
     import pandas as pd
     import os
+    import numpy as np 
     
     os.makedirs(os.path.dirname(outf) ,exist_ok=True)
     
-    df1 = pd.read_csv(in_retech,columns=['pnum','RETech'])
-    df2 = pd.read_csv(in_breadth,columns=['pnum','Breadth'])
+    # pandas is being a pain importing these... being explicit on loading 
+    
+    df1 = pd.read_csv(in_retech,names=['pnum','RETech','ayear'],
+                      header=0,
+                      dtype={'pnum':np.int64,'RETech':np.float,'ayear':np.int64})
+    df2 = pd.read_csv(in_breadth,names=['pnum','Breadth'],
+                      header=0,
+                      dtype={'pnum':np.int64,'Breadth':np.float})
     
     out = df1.merge(df2,on='pnum',how='outer',validate='1:1')
     out.to_csv(outf,index=False)
+      
 
 def delete_recent_raw_bags():
     '''

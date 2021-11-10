@@ -7,7 +7,7 @@ This folder creates and contains the data from Rapidly Evolving Technologies and
 <p align="center"> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:  
 	<br> <br> 
 	<b> To download a patent-level dataset with RETech and text-based Tech Breadth: </b>
-	<br><br>   <a href="https://www.dropbox.com/s/ke1307sle4gg1h1/Pat_text_vars_NotWinsored.zip?dl=1"><b>Click this link, which covers patents granted through last year!</b></a>
+	<br><br>   <a href="https://www.dropbox.com/s/15fhp766li4olmz/Pat_text_vars_NotWinsored.zip?dl=1"><b>Click this link, which covers patents granted through last year!</b></a>
 	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:   
 </p>
 
