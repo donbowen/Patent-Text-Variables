@@ -23,6 +23,8 @@ Please see the paper for details on the construction of the measures. Questions 
 				
 ## Code to obtain and create variables from patent text yourself 
 
+Warning: Running the code from scratch builds massive directories of many terabytes and will require substantial computer time as written. 
+
 The `code` folder includes code (`GPGupdate.py`) to 
 - Download all google patent pages. 
 - Parse the _**descriptions**_ sections of patent text in those webpages into "bags of words" and then clean them. We use descriptions to avoid legalese in the claims section. _Note: Google does not cleanly separate the abstract, claims, and description sections for patents before 1976, so all three sections are included for such patents._
