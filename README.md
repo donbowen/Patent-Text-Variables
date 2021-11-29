@@ -23,7 +23,7 @@ Please see the paper for details on the construction of the measures. Questions 
 				
 ## Code to obtain and create variables from patent text yourself 
 
-Warning: Running the code from scratch builds massive directories of many terabytes and will require substantial computer time as written. 
+_Warning: Running the code from scratch builds massive directories of many terabytes and will require substantial computer time as written._
 
 The `code` folder includes code (`GPGupdate.py`) to 
 - Download all google patent pages. 
