@@ -1,6 +1,6 @@
 # Patent Text Variables
 
-This folder creates and contains the data from Rapidly Evolving Technologies and Startup Exits ([SSRN link](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3245839)) by [Donald Bowen](https://bowen.finance), [Gerard Hoberg](http://www-bcf.usc.edu/~hoberg/), and [Laurent Fresard](https://people.lu.usi.ch/fresal/), which is forthcoming in Management Science. _Please cite that study when using or referring to any data or code in this repository._ 
+This folder creates and contains the data from Rapidly Evolving Technologies and Startup Exits ([SSRN link](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3245839)) by [Donald Bowen](https://bowen.finance), [Gerard Hoberg](http://www-bcf.usc.edu/~hoberg/), and [Laurent Fresard](https://people.lu.usi.ch/fresal/), which is forthcoming in Management Science. (A full replication kit for the analysis in the paper [is available here.](https://github.com/donbowen/BFH)) _Please cite that study when using or referring to any data or code in this repository._ 
 
 _The "front door" to this repo is [on my website, here.](https://bowen.finance/bfh_data/)_
 
