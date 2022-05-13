@@ -40,7 +40,7 @@ update_from = 2010
 update_to   = 2021
 
 # The latest app year to compute retech/breadth. 
-# I usually omit last three years given median approval speed at USPTO
+# I usually lag given examination/approval lags
 output_to   = update_to-3                           
 
 ##########################
@@ -54,26 +54,14 @@ import os
 GPGutils.set_up_onetime()         
 
 # get numbers/dates of new grants since last run
-<<<<<<< Updated upstream
-# check the output file for issues/to see how many new patents since last run! 
-GPGutils.update_pat_dates()       
-=======
 GPGutils.update_pat_dates(update_to)       
->>>>>>> Stashed changes
 
 # get nber class for those grants (needed for breadth)
-# manually verify output (ie it should cover all patents)
 GPGutils.update_pat_nber_class()  
 
-# before proceeding, check that google hasn't changed the HTML tags needed by parse_HTML()
-# currently, description text is in: <section id="description">
 # DL, parse to raw bags, clean into annual bags 
-<<<<<<< Updated upstream
-GPGutils.update_bags(update_from,update_to)  # do last 5 to 10 years to cover any new patent grants that were in examination a long time
-=======
 GPGutils.update_bags(update_from,update_to)  
     # if error: use delete_recent_raw_bags(), then restart update_bags()
->>>>>>> Stashed changes
 
 # create the measures and stitch together
 if os.path.exists('../'+output_dir+'/'):
@@ -85,13 +73,6 @@ else:
         
     GPGutils.make_breadth('../'+output_dir+'/Breadth.csv',end=output_to)     
     
-<<<<<<< Updated upstream
-    GPGutils.ship_outputs(in_retech ='../'+output_dir+'/RETech.csv',
-                          in_breadth='../'+output_dir+'/Breadth.csv',
-                          outf=      '../'+output_dir+'/Pat_text_vars_NotWinsored.csv'
-                      ) 
-=======
     GPGutils.ship_outputs(output_dir_name)
     
     # now run update_graphs.do 
->>>>>>> Stashed changes
