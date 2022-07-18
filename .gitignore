@@ -10,6 +10,7 @@ inputs*
 outputs*
 */admin/*
 */dev/*
+*/dev*/*
 
 # old code is in local folders called "code 2017" with a space
 
