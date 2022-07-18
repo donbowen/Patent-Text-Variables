@@ -12,8 +12,11 @@ _The "front door" to this repo is [my website, which contains more background in
 	<br> <br> 
 	<b> To download a patent-level dataset with RETech and Tech Breadth: </b>
 	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables/releases/download/data-to-2018/Pat_text_vars_NotWinsored.zip"><b>Click this link, which covers patent applications through 2018!</b></a>
-	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables/blob/main/pnum_gvkey.zip"><b>(Click this for a PNUM-GVKEY mapping.)</b></a>	
 	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:   
+	<br> <br> 
+	<b> We also provide a PNUM-GVKEY mapping, based on the PNUM-PERMCO linkages <a href="https://github.com/KPSS2017/Technological-Innovation-Resource-Allocation-and-Growth-Extended-Data">from Kogan et al (2017)</a> and the <a href="https://wrds-www.wharton.upenn.edu">CRSP-Compustat link table on WRDS</a>: </b>	
+	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables/blob/main/pnum_gvkey.zip?raw=true"><b>Click here for the PNUM-GVKEY link.</b></a>	
+	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:   	
 </p>
 
 ---
