@@ -12,11 +12,8 @@ _The "front door" to this repo is [my website, which contains more background in
 	<br> <br> 
 	<b> To download a patent-level dataset with RETech and Tech Breadth: </b>
 	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables/releases/download/data-to-2018/Pat_text_vars_NotWinsored.zip"><b>Click this link, which covers patent applications through 2018!</b></a>
-	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:   
-	<br> <br> 
-	<b> We also provide a PNUM-GVKEY mapping, based on the PNUM-PERMCO <br> linkages <a href="https://github.com/KPSS2017/Technological-Innovation-Resource-Allocation-and-Growth-Extended-Data">from Kogan et al (2017)</a> and the <a href="https://wrds-www.wharton.upenn.edu">CRSP-Compustat link table on WRDS</a>: </b>	
-	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables/blob/main/pnum_gvkey.zip?raw=true"><b>Click here for the PNUM-GVKEY link.</b></a>	
-	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:   	
+	<br> <br> Additional file: <a href="https://github.com/donbowen/Patent-Text-Variables/blob/main/pnum_gvkey.zip?raw=true"><b>Click here for a PNUM-GVKEY link.</b></a> 
+	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:    	
 </p>
 
 ---
@@ -49,3 +46,7 @@ The `code` folder includes code (`GPGupdate.py`) to
 
 This code is designed to make it easy to update annually and easy to add additional variable definitions, and we will push changes to the key "parsing" and "update_bags" functions if Google updates their HTML. 
 
+## PNUM-GVKEY link
+
+- This file is based on the PNUM-PERMCO linkages developed in <a href="https://github.com/KPSS2017/Technological-Innovation-Resource-Allocation-and-Growth-Extended-Data">Kogan et al. (2017)</a> and are linked to GVKEYs using the <a href="https://wrds-www.wharton.upenn.edu">CRSP-Compustat link table on WRDS</a>. You can find the code that created this file in the code folder.
+- The GVKEY links in this file will differ slightly from the those in our published paper.
