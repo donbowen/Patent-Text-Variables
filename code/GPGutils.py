@@ -31,7 +31,7 @@ def set_up_onetime():
     import urllib.request 
     import zipfile
 
-    url = 'https://www.dropbox.com/s/ad5hs23x918u9p7/Pat_Text_Vars_StarterInputs.zip?dl=1'    
+    url = 'https://github.com/donbowen/Patent-Text-Variables/releases/download/Pat_Text_Vars_StarterInputs/Pat_Text_Vars_StarterInputs.zip'    
     
     if not os.path.exists('../data/word_bags/'): # don't run if we've already downloaded!
     
