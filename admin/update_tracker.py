@@ -2,6 +2,8 @@ from requests_html import HTMLSession
 import pandas as pd
 from github import Github 
 import os
+import matplotlib.pyplot as plt
+plt.style.use('fivethirtyeight')
 
 # get total DL count as of now
 
@@ -29,10 +31,6 @@ repo.update_file('admin/DL_tracker.csv',
                  )
 
 # let's plot DLs over time 
-
-import matplotlib.pyplot as plt
-plt.style.use('fivethirtyeight')
-
 # the first 10 months are interpolated (no weekly data), so a little extra work
 # here to make that part of the line dotted
 
