@@ -1,0 +1,28 @@
+name: update slides
+
+on: 
+      
+  workflow_dispatch: 
+
+  schedule:
+    - cron: "0 12 * * 1" 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content to github runner.
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8 #install the python needed
+      - name: install py modules
+        run: pip install PyGithub      
+        run: pip install requests_html
+      - name: execute py script # run the run.py to get the latest data
+        run: |
+          python admin/update_tracker.py
+        env:
+          key: ${{ secrets.key }} 
