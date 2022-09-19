@@ -39,7 +39,7 @@ df2.loc[:,'interpolated']  = df2.iloc[:2,1]
 df2.loc[:,'weekly'] = df2.iloc[1:,1]
 df2.Date = pd.to_datetime(df2.Date) 
 plot = df2.plot.line(x='Date',y=['interpolated','weekly'],
-                     style=['b-.','b-'],legend=False,title='RETech Downloads')
+                     style=['b.','b-'],legend=False,title='RETech Downloads')
 
 plot.get_figure().savefig('temp.png', format="png")
 
