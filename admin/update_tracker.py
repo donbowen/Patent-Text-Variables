@@ -66,7 +66,7 @@ plot = (
     .diff()
 
     # convert to "weekly download" tracker
-    .resample('W').agg(pd.Series.sum, min_count=1)
+    .resample('W-MON',closed='right',label='left').agg(pd.Series.sum, min_count=1)
 
     # there is a week with some interpolated downloads and some known
     # just allocate that weeks downloads to the interpolated
@@ -74,7 +74,6 @@ plot = (
     .assign(interpolated = lambda x: x.interpolated.where(x.weekly.isnull() | x.interpolated.isnull(), None))
 
     # ok, time to plot
-    [:-1] # skip latest week (partial, will always be low)
     .reset_index()
     .plot.line(x='Date',y=['interpolated','weekly'],style=['b:','b-'],
                legend=False,title='Weekly Downloads of RETech Data')
