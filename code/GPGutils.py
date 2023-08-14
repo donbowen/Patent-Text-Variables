@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Oct 28 10:10:46 2021
-
-@author: deb219
+Change log: 
+    2023: update_bags split up for easier maintenance in future (dl, parse, clean)
+    
+Download during 2023:
+     patents view updated URLS, variable names, and other things. for example, 
+     no country variable in applications now. 
 """
 
 def set_up_onetime():
@@ -57,8 +60,8 @@ def set_up_onetime():
 
 
 def update_pat_dates(max_year=2020,min_year=2000,
-                     gyear_url = 'https://s3.amazonaws.com/data.patentsview.org/download/patent.tsv.zip',
-                     ayear_url = 'https://s3.amazonaws.com/data.patentsview.org/download/application.tsv.zip'):
+                     gyear_url = 'https://s3.amazonaws.com/data.patentsview.org/download/g_patent.tsv.zip',
+                     ayear_url = 'https://s3.amazonaws.com/data.patentsview.org/download/g_application.tsv.zip'):
     '''
     Updates 'patent_data_CURRENT.csv' with grant and app years for new patents.
        
@@ -93,15 +96,15 @@ def update_pat_dates(max_year=2020,min_year=2000,
     
     # download grant year data
     new_gyears = pd.read_csv(gyear_url,sep='\t',
-                             usecols=['number','type','date'],
-                             parse_dates=['date'])
-                                   
+                             usecols=['patent_id','patent_type','patent_date'],
+                             parse_dates=['patent_date'])
+                                       
     # format grant year data
     new_gyears = (new_gyears
-                 .assign(gyear = lambda x: x['date'].dt.year)
-                 .query('type == "utility" & gyear <= @max_year & gyear >= @min_year')
-                 [['number','gyear']]
-                 .rename(columns={'number':'pnum'})
+                 .assign(gyear = lambda x: x['patent_date'].dt.year)
+                 .query('patent_type == "utility" & gyear <= @max_year & gyear >= @min_year')
+                 [['patent_id','gyear']]
+                 .rename(columns={'patent_id':'pnum'})
                  )
         
     # download app year data (a few rows have bad dates, so some extra work...)    
@@ -113,12 +116,12 @@ def update_pat_dates(max_year=2020,min_year=2000,
                                                             errors='coerce').notnull())
                  .assign(pnum_is_int = lambda x: pd.to_numeric(x['patent_id'],
                                                             errors='coerce').notnull())
-                 .assign(date_is_date = lambda x: pd.to_datetime(x['date'],
+                 .assign(date_is_date = lambda x: pd.to_datetime(x['filing_date'],
                                                             errors='coerce').notnull())
-                 .query('code_is_int & pnum_is_int & country == "US" & date_is_date')
+                 .query('code_is_int & pnum_is_int & date_is_date')
                  
                  # now that data is nicely behaved, convert the date var  
-                 .assign(ayear = lambda x: pd.to_datetime(x['date'],
+                 .assign(ayear = lambda x: pd.to_datetime(x['filing_date'],
                                                           errors='coerce').dt.year)
                 
                  # output 
@@ -163,7 +166,7 @@ def update_pat_dates(max_year=2020,min_year=2000,
     updated_years.to_csv('../data/patent_level_info/pat_dates_CURRENT.csv',index=False)
     
     
-def update_pat_nber_class(cpc_url = 'https://s3.amazonaws.com/data.patentsview.org/download/cpc_current.tsv.zip' ):
+def update_pat_nber_class(cpc_url = 'https://s3.amazonaws.com/data.patentsview.org/download/g_cpc_current.tsv.zip' ):
     '''
     Warning: Slow download of 1+GB file!
     
@@ -189,9 +192,9 @@ def update_pat_nber_class(cpc_url = 'https://s3.amazonaws.com/data.patentsview.o
     print('update_pat_nber_class now downloading large files...')
     
     cpc = pd.read_csv(cpc_url,sep='\t',
-                      usecols=['patent_id','group_id','sequence'])\
-         .query('sequence == 0')[['patent_id','group_id']]
-    cpc.columns = ['pnum','cpc_group']
+                      usecols=['patent_id','cpc_subclass','cpc_sequence'])\
+         .query('cpc_sequence == 0')[['patent_id','cpc_subclass']]
+    cpc.columns = ['pnum','cpc_group']  #"cpc_subclass" is patentviews name for the group
     
     # create uspc 1-->1 nber bridge
     
@@ -349,12 +352,80 @@ def download_gpg_pages(list_of_patent_nums,num_fetch_threads=20):
     print("Elapsed seconds (rounded up): %d" %(end-start+1))
     print("Elapsed minutes (rounded up): %d" %((end-start)/60+1))
 
-    
-def update_bags(min_year=2019,max_year=2019,force_clean=False):
+   
+def download_patent_HTML(min_year=2019,max_year=2019):
     '''
     For all patents in the "pat_dates_CURRENT.csv" with application years in 
     [min_year, max_year], download the google patent page's html if the patent
-    isn't in the HTML folder.
+    isn't in an HTML folder.    
+    '''
+    
+    import os, logging
+    import pandas as pd 
+    
+    # ======================================================================= #
+    # %%   set up     
+    # ======================================================================= #
+    
+    # directory structure - fixed components
+    
+    bag_dir = '../data/word_bags/'
+    
+    # directory structure - these parts change if you want to parse the whole patent 
+    
+    log_fname        = os.path.join(bag_dir,'descriptONLY','logger.log')
+    os.makedirs(os.path.join(bag_dir,       'descriptONLY'), exist_ok=True)
+    
+    # start logging 
+
+    logging.basicConfig(level=logging.INFO,
+                        filename=log_fname,
+                        format='%(asctime)s - %(message)s')
+
+    # detect years we've DLed files (the parser we use depends on the 
+    # formatting of GPG at the time a given page is downloaded)
+    
+    yS_of_DL = [int(y_path[-4:]) 
+                for y_path in os.listdir('../data/')
+                if y_path[:-4] == 'html_DL_in_' ] 
+  
+    # df of all patents/appyears applied for in this time period
+    # this is a key input, this is the set of patents we will try to parse 
+    
+    print('Figuring out what to DL')
+    
+    pnum_years_df = pd.read_csv('../data/patent_level_info/pat_dates_CURRENT.csv')\
+                   .query("ayear <= @max_year & ayear >= @min_year")    
+    
+    # Function to check if the file exists
+    def file_exists(pnum, year):
+        'year is a year we might have downloaded the patent'
+        file_path = f'../data/html_DL_in_{year}/{str(pnum).zfill(8)[:4]}/html_{pnum}.txt'
+        return os.path.exists(file_path)
+    
+    # List to store pnum with no corresponding files
+    pnums_to_DL = []
+    
+    # Loop through each row in the DataFrame
+    for pnum in pnum_years_df['pnum'].to_list():
+    
+        # Check if the file is found for any of the possible years
+        found_file = any(file_exists(pnum, year) for year in yS_of_DL)
+        
+        # If the file is not found for any of the possible years, add pnum to the list
+        if not found_file:
+            pnums_to_DL.append(pnum)
+    
+    print('Pnums to DL:',len(pnums_to_DL))
+    logging.info("DLing HTML for:  %i-%i" % (min_year,max_year))
+    logging.info("Pnums to DL:     %i" % (len(pnums_to_DL)))
+   
+    download_gpg_pages(pnums_to_DL)
+    
+def parse_bags(min_year=2019,max_year=2019,force_clean=False):
+    '''
+    For all patents in the "pat_dates_CURRENT.csv" with application years in 
+    [min_year, max_year], parse the patents.
     
     '''
     
@@ -400,7 +471,7 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
     print('Figuring out what to DL, and what to parse')
     
     pnum_years_df = pd.read_csv('../data/patent_level_info/pat_dates_CURRENT.csv')\
-                   .query("ayear <= @max_year & ayear >= @min_year")    
+                    .query("ayear <= @max_year & ayear >= @min_year")    
      
     # we don't need to parse all those! some might already be done!
     # so get the subset of patents without bags yet
@@ -416,7 +487,7 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
                         - existing_pnums) # pats to bag but haven't already
     pnums_without_bags = pd.DataFrame(pnums_without_bags,
                                       columns=['pnum'])\
-                         .merge(pnum_years_df,on='pnum')  # bring in the year info
+                          .merge(pnum_years_df,on='pnum')  # bring in the year info
     
     del existing_pnums
 
@@ -503,7 +574,7 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
     logging.info("Pnums to DL:  %i" % (len(pnums_to_DL)))
 
     # ======================================================================= #
-    # %% DOWNLOAD HTML, PARSE IT > UPDATED WORD INDEX, CLEAN WORD BAGS
+    # %% PARSE IT > UPDATED WORD INDEX, CLEAN WORD BAGS
     #
     # loop over APPLICATION years (because we do our cleaning within a 
     # given app year)  
@@ -516,30 +587,9 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
     pnums_parsed = [] 
     
     for y in range(min_year,max_year+1):
-        
-        # %%% WITHIN YEAR Y, DOWNLOAD NEW PATENTS 
-        
+                
         print('year',y)
         
-        # if len(pnums_to_DL.query('ayear == @y')) > 0:
-            
-        #     # download
-            
-        #     DL_list = pnums_to_DL.query('ayear == @y').pnum.tolist()
-            
-        #     download_gpg_pages(DL_list)
-                                    
-        #     # find the patents we downloaded and add them to pnums_to_parse 
-            
-        #     DLed = [pnum for pnum in DL_list if 
-        #             os.path.exists('../data/html_DL_in_'+str(datetime.now().year)
-        #                            +'/' +str(pnum).zfill(8)[:4] + '/html_' 
-        #                            + str(pnum) + '.txt')]
-        #     DLed = pd.DataFrame(DLed,columns=['pnum'])\
-        #             .merge(pnums_to_DL,on='pnum')\
-        #             .assign(year_of_DL = datetime.now().year)            
-        #     pnums_to_parse = pd.concat([pnums_to_parse,DLed],sort=False)
-         
         # %%% WITHIN YEAR Y, PARSE NEW PATENTS 
         # Note: most of the code here is just printing info or saving objects
         
@@ -595,22 +645,12 @@ def update_bags(min_year=2019,max_year=2019,force_clean=False):
             with open(failure_fname,"w") as f_csv:
                 out_csv = csv.writer(f_csv, delimiter=',',quoting=csv.QUOTE_NONNUMERIC)
                 out_csv.writerows(failure_dict.items())                
-        
-    # %% if we have new raw bags to parse or force_clean is True, clean relevant years
-            
-    print("Cleaning the word bags...")
-        
+                           
     years_to_parse = pd.DataFrame(pnums_parsed,columns=['pnum'])\
                     .merge(pnum_years_df,on='pnum').ayear.to_list()
 
     print('We parsed',len(pnums_parsed),'patents across',len(set(years_to_parse)),'years')
-
-    if len(pnums_parsed) > 0:    
-        logging.info("STARTING TO CLEAN THE BAGS")
-        clean_bags(list(set(years_to_parse))) 
-    elif force_clean:
-        logging.info("STARTING TO CLEAN THE BAGS")
-        clean_bags(list(range(min_year,max_year+1)))        
+    logging.info('We parsed',len(pnums_parsed),'patents across',len(set(years_to_parse)),'years')
    
 
 def parse_HTML(pnum,year_of_DL):
@@ -729,13 +769,13 @@ def parse_HTML(pnum,year_of_DL):
         return pnum # so we can track which years to run the corpus cleaning on
     
     
-def clean_bags(list_of_years):
-    """
-    Note: word_index must be loaded before calling this. 
+def clean_bags(min_year,max_year):
+    """    
+    Update: This is MUCH more memory efficient than previous version, but reads
+    the raw patent count files twice instead of once.
     
-    Guideline on time: It took roughly 3 hours for 2018.
-    
-    Py 3.7...
+    As a result, the slowest years take about 8 hours on my computer, but <3GB
+    of memory is needed!
     
     Inputs:
         
@@ -772,18 +812,117 @@ def clean_bags(list_of_years):
         potential_stopwords, which would alter the cleaned bags somewhat. 
         
     """
+
+    import os, csv, logging
+    import pandas as pd 
+    from datetime import datetime
+    from tqdm import tqdm 
+    from collections import defaultdict
     
-    import pandas as pd
-    import os
-    from tqdm import tqdm
+    # ======================================================================= #
+    # %%   set up     
+    # ======================================================================= #
+    
+    # directory structure - fixed components
+    
+    bag_dir = '../data/word_bags/'
+    word_index_fname = os.path.join(bag_dir,'word_index.csv')
+    
+    # directory structure - these parts change if you want to parse the whole patent 
+    
+    log_fname        = os.path.join(bag_dir,'descriptONLY','logger.log')
+    count_dir        = os.path.join(bag_dir,'descriptONLY','bags_raw_file_per_pat')
+    os.makedirs(os.path.join(bag_dir,       'descriptONLY'), exist_ok=True)
+    
+    short_stop_fname     = '../data/word_bags/descriptONLY/wordspace/short_words_to_drop.csv'
+    potential_stop_fname = '../data/word_bags/descriptONLY/wordspace/potential_stopwords.csv'
+    batchdir             = '../data/word_bags/descriptONLY/bags_cleaned_annualbatch_by_ayear/'
+        
+    os.makedirs(batchdir,exist_ok=True)    
+        
+    # start logging 
+
+    logging.basicConfig(level=logging.INFO,
+                        filename=log_fname,
+                        format='%(asctime)s - %(message)s')
+
+    print("Cleaning the word bags...")
+    logging.info("STARTING TO CLEAN THE BAGS")
             
-    # probably the fastest way to load many csv's into pandas is pd.concat(map(pd.read_csv,filepaths))
-    # here, we need to load only if the file exists, and add a pnum column to the each file we load
-    # So this 
+    # what years to clean (and thus what patents to clean)
+    
+    list_of_years = list(range(min_year,max_year+1))        
+    new_pat_dates = pd.read_csv('../data/patent_level_info/pat_dates_CURRENT.csv').query('ayear in @list_of_years').astype('int32')      
+        
+    ##############################################################################
+    #   CREATE short_words_to_drop.csv (updates off of new word_index)
+    #
+    # create list of (indexes of) short words that will be dropped
+    ##############################################################################
+    	
+    # Get the indices of short words (recreate incase word_index changed )
+    short_word_indices = []
+    
+    # Load the CSV file and filter rows with string length less than 4
+    with open(word_index_fname, 'r') as f_csv:
+        csv_reader = csv.reader(f_csv)
+        
+        for row in csv_reader:
+            if len(row[0]) < 4:
+                short_word_indices.append(int(row[1]))
+    
+    # put into df (to save, and bc code below was written using df)
+    short_stop_ALLYEARS = pd.DataFrame({'word_index': short_word_indices})
+    
+    # int32 saves some memory, cheap pre-sort might speed up merges/filters    
+    short_stop_ALLYEARS = short_stop_ALLYEARS.astype('int32').sort_values('word_index')
+    short_stop_ALLYEARS.to_csv(short_stop_fname,index=False)
+    
+    ##############################################################################
+    #   LOAD old_bad_ocr words (words than only exist before patents were digitized)
+    ##############################################################################
+    
+    old_bad_ocr          = (pd.read_csv('../inputs/bad_ocr_words.csv',names=['word_index'],)
+                            .astype('int32').sort_values('word_index')  )  
+    
+    ##############################################################################
+    #   LOAD words used in >25% of patents in a year
+    #
+    # cols: word_index, year
+    #
+    # load existing, and then purge current stops from that year (we  
+    # rebuild stopword list completely when the below is run.)
+    ##############################################################################
+    
+    if os.path.exists(potential_stop_fname):
+        potential_stopwords = pd.read_csv(potential_stop_fname)\
+            .query('ayear not in @list_of_years').astype('int32')  
+        
+    else:
+        potential_stopwords = pd.DataFrame()
+    
+    ##############################################################################
+    #   LOOP OVER YEARS, WITHIN EACH:
+    #
+    #   (1) FIGURE OUT stopwords (building up potential_stopwords.csv)
+    #
+    # words used in >25% of patent applications in a given year
+    #
+    #   (2) OUTPUT CLEAN WORD BAGS 
+    #
+    # Output: 1 csv per year, containing (pnum, word_index, count) for all pnums
+    #         applied for in that year, after removing 
+    #         - short words "short_words_to_drop.csv"
+    #         - badocr words "bad_ocr_words.csv" (in input folder)
+    #         - stopwords in (too frequent usage)   "potential_stopwords.csv"
+    #
+    ############################################################################## 
+    
+    logging.info("preliminaries complete, now cleaning+getting annual stopwords")
     
     def pd_concat_subfunc(pnum):
         '''
-        WARNING: THIS ONLY FINDS DESCRIPTION-ONLY WORD BAGS AS WRITTEN CURRENTLY
+        Helper function to quickly load many csv files into one df
         
         Example usage, two steps: (1) set list of pnums to load, (2) load pnums:
             
@@ -794,101 +933,87 @@ def clean_bags(list_of_years):
         the possibility of missing patent files
     
         '''
-        p_path = '../data/word_bags/descriptONLY/bags_raw_file_per_pat/'+\
-                                     str(pnum).zfill(8)[:4]+'/count_'+str(pnum)+'.csv'
-        if os.path.exists(p_path):               
-            return pd.read_csv(p_path, names=['word_index','count']).assign(pnum=pnum)  
-    
-    ##############################################################################
-    #   CREATE short_words_to_drop.csv (updates off of new word_index)
-    #
-    # create list of (indexes of) short words that will be dropped
-    ##############################################################################
-    	    
-    short_stop_ALLYEARS = pd.DataFrame([word_index[k] for k in word_index if len(str(k))<4],columns=['word_index'])
-    short_stop_ALLYEARS.to_csv('../data/word_bags/descriptONLY/wordspace/short_words_to_drop.csv', index=False)
-    
-    del word_index # was hoping it would free up memory... (It didn't really...)
-    
-    ##############################################################################
-    #   CREATE potential_stopwords.csv
-    #
-    # words used in >25% of patent applications in a given year
-    #
-    #             (and for efficiency, within same loop)
-    #
-    #   CLEAN WORD BAGS
-    #
-    # Output: 1 csv per year, containing (pnum, word_index, count) for all pnums
-    #         applied for in that year, after removing 
-    #         - short words "short_words_to_drop.csv"
-    #         - badocr words "bad_ocr_words.csv" (in input folder)
-    #         - stopwords in (too frequent usage)   "potential_stopwords.csv"
-    #
-    ##############################################################################
-       
-    batchdir = '../data/word_bags/descriptONLY/bags_cleaned_annualbatch_by_ayear/'
-    os.makedirs(batchdir,exist_ok=True)
-    
-    new_pat_dates        = pd.read_csv('../data/patent_level_info/pat_dates_CURRENT.csv').query('ayear in @list_of_years')    
-    short_stop_ALLYEARS  = pd.read_csv('../data/word_bags/descriptONLY/wordspace/short_words_to_drop.csv')
-    old_bad_ocr          = pd.read_csv('../inputs/bad_ocr_words.csv',names=['word_index'],)
-    
-    potential_stop_fname = '../data/word_bags/descriptONLY/wordspace/potential_stopwords.csv'
-    
-    if os.path.exists(potential_stop_fname):
-        # load existing, and then purge current stops from that year (we  
-        # rebuild stopword list completely when the below is run.)
-        potential_stopwords = pd.read_csv(potential_stop_fname)\
-            .query('ayear not in @list_of_years')
+        p_path = f'{count_dir}/{str(pnum).zfill(8)[:4]}/count_{str(pnum)}.csv'
         
-    else:
-        potential_stopwords = pd.DataFrame()
+        if os.path.exists(p_path):          
+            # int32 will cover our needs, half the data of int64
+            return pd.read_csv(p_path, names=['word_index','count']).assign(pnum=pnum).astype('int32')  
+
+    def filter_data(batch):
+        'Efficient removal of rows of a df for our problem'
+        batch = batch[~batch['word_index'].isin(purge['word_index'])]
+        return batch[['pnum', 'word_index', 'count']].sort_values(['pnum', 'word_index'])
+
+    def write_to_csv(pnums, yyyy, batch_size=10000):
+        'In batches, load pnums and apply filtering, and save annual csv'
+        output_path = f'{batchdir}/bag_ayear_{yyyy}.csv'  # Replace with your desired output path
+        with open(output_path, 'w') as f:
+            for i in tqdm(range(0, len(pnums), batch_size),
+                          desc=f'Purging and saving word bags for {yyyy}',
+                          total = 1+len(pnums)//batch_size):
+                batch_pnums = pnums[i:i+batch_size]
+                batch_pats = pd.concat(map(pd_concat_subfunc, batch_pnums))
+                filtered_batch_pats = filter_data(batch_pats)
+                filtered_batch_pats.to_csv(f, index=False, header=(i == 0))
     
-    for yyyy in tqdm(list_of_years, desc='Cleaning Annual Word Bags'):
-        
-        logging.info( "cleaning: %i" %(yyyy) )
-                
-        # load (raw) pat word bags this year (long process!)
+    for yyyy in list_of_years:
         
         pnums = new_pat_dates.query('ayear == @yyyy').pnum.to_list()
-        batch_pats = pd.concat(map(pd_concat_subfunc, pnums))
+
+        logging.info( "Finding annual stopwords for year: %i" %(yyyy) )
         
-        logging.info('loaded')
+        # find this years stop words 
+        # ==> find out how many patents use a given word this year
+        # ==> load patent and increment dict = word_index:pnum_count
+        # this obj is, at max, size len(word_index) long by 2(pnum+count)
+    
+        n_pats = 0 # count the patents we've parsed
+        word_index_counts = defaultdict(int)
         
-        # add the stopwords from this year to potential_stopwords
+        for pnum in tqdm(pnums, desc='Getting stopwords'):
+            p_path = '../data/word_bags/descriptONLY/bags_raw_file_per_pat/' + \
+                     str(pnum).zfill(8)[:4] + '/count_' + str(pnum) + '.csv'
+                     
+            if os.path.exists(p_path):
+                n_pats += 1
+                with open(p_path, 'r') as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        word_idx = int(row[0])  # word_index is the first column in csv
+                        word_index_counts[word_idx] += 1        
+                             
+        threshold = n_pats * 0.25
+        filtered_word_counts = {k: v for k, v in word_index_counts.items() if v >= threshold}
         
-        n_pats = batch_pats.pnum.nunique()    
-        piv = batch_pats.groupby('word_index')['pnum'].count().reset_index()
-        piv.columns = ['word_index','frac']
-        piv.frac = piv.frac / n_pats
-        piv = piv.query('frac >= .25').assign(ayear = yyyy)[['word_index','ayear']]
-        potential_stopwords = potential_stopwords.append(piv)
+        # update the stopwords dataset 
         
-        logging.info('potential_stopwords figured')
+        stopwords_this_year = pd.DataFrame({
+            'word_index': list(filtered_word_counts.keys()),
+            # 'frac': [count / n_pats for count in filtered_word_counts.values()]
+        }).assign(ayear=yyyy)
+
+        potential_stopwords = potential_stopwords.append(stopwords_this_year)
+
+        # this is the total set of word_indices to drop:
+
+        purge = (pd.concat([stopwords_this_year[['word_index']],short_stop_ALLYEARS,old_bad_ocr])
+                 .drop_duplicates('word_index')
+                 .sort_values('word_index'))
+                
+        logging.info('stopwords_this_year figured')
+            
+        # now, load and clean
         
-        # clean the word bags and output        
-        
-        (batch_pats
-          # merge in stopword indicators
-          .merge(short_stop_ALLYEARS,on='word_index',          how='left',indicator='short')
-          .merge(old_bad_ocr,        on='word_index',          how='left',indicator='badocr')
-          .assign(ayear=yyyy) # needed for next merge
-          .merge(potential_stopwords,on=['word_index','ayear'],how='left',indicator='frequent')
-         
-          # drop any drop words
-          .query('(short == "left_only") & (badocr == "left_only") & (frequent == "left_only")')
-         
-          # format for output and save
-          [['pnum','word_index','count']].sort_values(['pnum','word_index'])
-          .to_csv(batchdir+'bag_ayear_'+str(yyyy)+'.csv',index=False )
-          )
+        logging.info( "outputting cleaned word_bags for year: %i" %(yyyy) )
+    
+        write_to_csv(pnums, yyyy, 25000)
         
         logging.info('output of '+str(yyyy)+' complete')
         
-                
+    # output potential stopwords             
     potential_stopwords.to_csv(potential_stop_fname,
-                               index=False)
+                                index=False)
+
 
     
       

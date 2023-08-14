@@ -32,12 +32,12 @@ within dir! If you cloned/downloaded the repo, this is taken care of.
 # and i'm not doing a GLFS workaround
 # so I store them in folders with the date of the update (oh yeah...)
 
-output_dir_name  = 'outputs 2022-04' # update to new me each update to save 
+output_dir_name  = 'outputs 2023-07' # update to new me each update to save 
                                      # prior outputs (for error checks, etc)
 
 # get DLs and parse files in these application years
 update_from = 2010        
-update_to   = 2021
+update_to   = 2022
 
 # The latest app year to compute retech/breadth. 
 # I usually lag given examination/approval lags
@@ -60,8 +60,12 @@ GPGutils.update_pat_dates(update_to)
 GPGutils.update_pat_nber_class()  
 
 # DL, parse to raw bags, clean into annual bags 
-GPGutils.update_bags(update_from,update_to)  
+GPGutils.download_patent_HTML(update_from,update_to)  
+
+GPGutils.parse_bags(update_from,update_to)  
     # if error: use delete_recent_raw_bags(), then restart update_bags()
+
+GPGutils.clean_bags(update_from,update_to)  
 
 # create the measures and stitch together
 if os.path.exists('../'+output_dir+'/'):
@@ -69,9 +73,9 @@ if os.path.exists('../'+output_dir+'/'):
     print('overwrite existing prior outputs. Or maybe not. Idk.')
 else:
     
-    GPGutils.make_RETech('../'+output_dir+'/RETech.csv',end=output_to)  
+    GPGutils.make_RETech('../'+output_dir_name+'/RETech.csv',end=output_to)  
         
-    GPGutils.make_breadth('../'+output_dir+'/Breadth.csv',end=output_to)     
+    GPGutils.make_breadth('../'+output_dir_name+'/Breadth.csv',end=output_to)     
     
     GPGutils.ship_outputs(output_dir_name)
     

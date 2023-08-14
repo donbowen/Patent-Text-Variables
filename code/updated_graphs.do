@@ -1,3 +1,9 @@
+
+* for figure title/notes:
+
+local through 2019    // what's the latest applcation year in this data?
+local grantsfrom 2022 // what's the latest grants in this data
+
 ********************************************************************************	
 * load util funcs	
 ********************************************************************************
@@ -215,7 +221,7 @@
 	
 *** load data and prep to plot
 	
-	cd "../outputs 2022-04/" // unzipfile copies into cd by default, so move cd
+	cd "../outputs 2023-07/" // unzipfile copies into cd by default, so move cd
 	
 	unzipfile Pat_text_vars_NotWinsored.zip, replace
 	
@@ -248,11 +254,11 @@
 	
 	local lineparts ayear if ayear >= 1930 & ayear <= 2020, c(L) lp(solid)   lcolor(black) lw(thick) ms(i) mlab() mlabpos(9) mlabs(large) mlabc(black)
 	twoway (line retech `lineparts') , ///
-		title("Updated RETech through 2018", size( vlarge )) ytitle("") xtitle("") legend(off) ///
+		title("Updated RETech through `through'", size( vlarge )) ytitle("") xtitle("") legend(off) ///
 		xlabel(1930 (10) 2020 ,  labs(large)   ) ///
 		ylabel(, labs(large) angle(horizontal) glcolor(p2%10)  ) ///
 		graphregion(color(white) lwidth(medium)) ///
-		note(" " "{bf:Note:}      The RETech index is based all patents {bf:applied} for in a given year." "{bf:Sample:} Patents granted by Dec 31 2021.",)
+		note(" " "{bf:Note:}      The RETech index is based all patents {bf:applied} for in a given year." "{bf:Sample:} Patents granted by Dec 31 `2022'.",)
 	graph display , ysize(4) xsize(6)
 	graph export "../code/updated_graphs/RETech-1930.png", replace		
 
@@ -294,8 +300,8 @@
 		window manage close graph _all
 
 		graph combine ch co dr el me ot,  rows(2) graphregion(color(white) lwidth(medium)) ycommon xcommon imargin(tiny) ///
-				title("Updated RETech through 2018", size( vlarge ) margin(b=5))  ///
-				note(" " "{bf:Note:}      The RETech index is based all patents {bf:applied} for in a given year." "{bf:Sample:} Patents granted by Dec 31 2021.",)
+				title("Updated RETech through `through'", size( vlarge ) margin(b=5))  ///
+				note(" " "{bf:Note:}      The RETech index is based all patents {bf:applied} for in a given year." "{bf:Sample:} Patents granted by Dec 31 `grantsfrom'",)
 
 		graph display, xsize(8) ysize(5)
 		graph export "../code/updated_graphs/RETech-1930-ByTechCat.png", replace
