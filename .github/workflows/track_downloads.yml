@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: 3.8 #install the python needed
       - name: install requirements
-        run: pip install PyGithub requests_html pandas matplotlib
+        run: pip install PyGithub requests_html pandas matplotlib lxml=5.1.0
       - name: execute py script # run the run.py to get the latest data
         run: |
           python admin/update_tracker.py
