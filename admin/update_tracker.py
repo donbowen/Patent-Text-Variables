@@ -4,13 +4,21 @@ from github import Github
 import os
 import matplotlib.pyplot as plt
 plt.style.use('fivethirtyeight')
+import requests
 
 # get total DL count as of now
 
-count_url =  'https://img.shields.io/github/downloads/donbowen/patent-text-variables/total.svg'
-session = HTMLSession()
-r = session.get(count_url)
-count = r.html.search('Downloads: {:n}')[0]
+owner = "donbowen"
+repo = "Patent-Text-Variables"
+token = os.environ['key']
+url = f"https://api.github.com/repos/{owner}/{repo}/releases"
+
+# Make the GET request to retrieve releases
+response = requests.get(url, headers={"Authorization": f"token {token}"})
+releases = response.json()
+
+# Sum the download counts from all releases
+count = sum(asset["download_count"] for release in releases for asset in release["assets"])
 
 # download and add to DL tracker dataframe
 
@@ -20,7 +28,6 @@ df.loc[len(df.index)] = [pd.to_datetime('today').date(),count]
 
 # upload that file 
 
-token = os.environ['key']
 g = Github(token)
 repo = g.get_repo('donbowen/Patent-Text-Variables')
 file_to_update = repo.get_contents('admin/DL_tracker.csv')
