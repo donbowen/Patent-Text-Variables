@@ -11,7 +11,7 @@ _The "front door" to this repo is [my website, which contains more background in
 <p align="center"> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:  
 	<br> <br> 
 	<b> To download a patent-level dataset with RETech and Tech Breadth: </b>
-	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables/releases/download/data-to-2018/Pat_text_vars_NotWinsored.zip"><b>Click this link, which covers patent applications through 2018!</b></a>
+	<br><br>   <a href="https://github.com/donbowen/Patent-Text-Variables/releases/download/data-to-2021/Pat_text_vars_NotWinsored.zip"><b>Click this link, which covers patent applications through 2021!</b></a>
 	<br> <br> Additional file: <a href="https://github.com/donbowen/Patent-Text-Variables/blob/main/pnum_gvkey.zip?raw=true"><b>Click here for a PNUM-GVKEY link.</b></a> 
 	<br> <br> :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star: :star:    	
 </p>
@@ -28,7 +28,7 @@ The variables provided here are based on the text in the section of patents desc
 	
 ## Important notes for using the data
 
-1. The file above contains patents applied for by Dec 31, 2018 and granted by Dec 31, 2021. 
+1. The file above contains patents applied for by Dec 31, 2021 and granted by Dec 31, 2024. 
 1. The dataset above contains raw values (i.e. not winsorized) and we recommend winsorizing by _application_ year before using them.
 2. We generally recommend using the data above by _**application**_ year to match the timing of the innovation best. 
 3. **`code/aggregate_measures.do` contains several Stata functions to convert patent-level variables into group-time variables (e.g. firm-year, state-year, MSA-quarter).** We include the stocking function from our paper, which gets the group's average patent stats over the prior five years, after applying a 20% rate of depreciation. 
