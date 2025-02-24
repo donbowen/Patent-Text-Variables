@@ -230,7 +230,7 @@ def update_pat_nber_class(cpc_url = 'https://s3.amazonaws.com/data.patentsview.o
     nber.to_csv('../data/patent_level_info/nber_CURRENT.csv',index=False)    
    
    
-def download_gpg_pages(list_of_patent_nums,num_fetch_threads=20):
+def download_gpg_pages_OLD(list_of_patent_nums,num_fetch_threads=20):
     """
     Downloads Google Patent pages for utility patents by iterating over the 
     numbers. Will produce 1 html file (as a txt) per patent, so this requires a lot 
@@ -352,7 +352,220 @@ def download_gpg_pages(list_of_patent_nums,num_fetch_threads=20):
     print("Elapsed seconds (rounded up): %d" %(end-start+1))
     print("Elapsed minutes (rounded up): %d" %((end-start)/60+1))
 
+def download_gpg_pages(patent_nums):
+    """
+    Downloads Google Patent pages for utility patents by iterating over the 
+    numbers. Will produce 1 html file (as a txt) per patent, so this requires a lot 
+    of time. Google doesn't seem to throttle with the settings below, and it 
+    downloads about 10 patents/sec. (~1 million a day) 
+    
+    Saves downloads within data/html_DL_in_<YYYY> where YYYY is the current 
+    year. This is intended to make the code backward compatible and "future
+    proof" for users that update the data from year to year when the google 
+    html structure changes and users want to return to the raw HTML to extract
+    more info than the word bags already parsed. (Or to repeat the parsing 
+    for some reason.)
+    """
+
+    import os
+    import time
+    import aiohttp
+    import asyncio
+    import logging
+    import nest_asyncio
+    from datetime import datetime
+    from pathlib import Path
+    from aiohttp import ClientTimeout
+    
+    # Enable nested event loops for Spyder
+    nest_asyncio.apply()
+    
+    class GooglePatentsScraper:
+        def __init__(self, save_dir: str = None, max_concurrent_requests: int = 50,
+                     request_delay: float = 0.1, timeout: int = 30):
+            self.save_dir = (save_dir if save_dir 
+                            else f'../data/html_DL_in_{datetime.now().year}')
+            self.max_concurrent_requests = max_concurrent_requests
+            self.request_delay = request_delay
+            self.timeout = ClientTimeout(total=timeout)
+            self.headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+            self.session = None
+            self.rate_limit_queue = None
+            self.successful_downloads = 0
+            self.failed_downloads = 0
+            
+            # Setup logging with a more explicit configuration
+            self.logger = logging.getLogger('patent_scraper')
+            self.logger.setLevel(logging.INFO)
+            
+            # Create handlers if they don't exist
+            if not self.logger.handlers:
+                # File handler
+                fh = logging.FileHandler('patent_scraper.log', mode='a')
+                fh.setLevel(logging.INFO)
+                
+                # Console handler
+                ch = logging.StreamHandler()
+                ch.setLevel(logging.WARNING)
+                
+                # Create formatter and add it to the handlers
+                formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+                fh.setFormatter(formatter)
+                ch.setFormatter(formatter)
+                
+                # Add the handlers to the logger
+                self.logger.addHandler(fh)
+                self.logger.addHandler(ch)
+            
+            self.logger.info("Scraper initialized")
+    
+        async def init_session(self):
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    headers=self.headers,
+                    timeout=self.timeout
+                )
+                self.rate_limit_queue = asyncio.Queue()
+                self.logger.info("Session initialized")
+    
+        async def download_patent(self, patent_num: int):
+            if self.rate_limit_queue:
+                await self.rate_limit_queue.get()
+            
+            html_file_path = Path(f'{self.save_dir}/{str(patent_num).zfill(8)[:4]}/html_{patent_num}.txt')
+            Path(self.save_dir).mkdir(parents=True, exist_ok=True)
+            Path(f"{self.save_dir}/{str(patent_num).zfill(8)[:4]}").mkdir(exist_ok=True)
+            
+            if html_file_path.exists():
+                self.logger.info(f"Already have patent {patent_num}")
+                return
+    
+            url = f'https://patents.google.com/patent/US{patent_num}'
+            
+            try:
+                async with self.session.get(url) as response:
+                    if response.status == 200:
+                        content = await response.read()
+                        html_file_path.write_bytes(content)
+                        self.successful_downloads += 1
+                        #self.logger.info(f"Successfully downloaded patent {patent_num}")
+                    else:
+                        self.logger.warning(f"Failed to download patent {patent_num}: Status {response.status}")
+                        self.failed_downloads += 1
+            except Exception as e:
+                self.logger.error(f"Error downloading patent {patent_num}: {str(e)}")
+                self.failed_downloads += 1
+    
+        async def rate_limiter(self):
+            while True:
+                await asyncio.sleep(self.request_delay)
+                if self.rate_limit_queue:
+                    await self.rate_limit_queue.put(1)
+    
+        async def download_patents_async(self, patent_nums):
+            self.logger.info(f"Starting async download of {len(patent_nums)} patents")
+            try:
+                await self.init_session()
+                
+                limiter_task = asyncio.create_task(self.rate_limiter())
+                semaphore = asyncio.Semaphore(self.max_concurrent_requests)
+                
+                async def bounded_download(num):
+                    try:
+                        async with semaphore:
+                            # Add timeout to individual downloads
+                            async with asyncio.timeout(30):  # 30 second timeout per patent
+                                await self.download_patent(num)
+                    except asyncio.TimeoutError:
+                        self.logger.error(f"Timeout downloading patent {num}")
+                        self.failed_downloads += 1
+                    except Exception as e:
+                        self.logger.error(f"Error in bounded_download for patent {num}: {str(e)}")
+                        self.failed_downloads += 1
+                
+                # Create all tasks
+                tasks = [asyncio.create_task(bounded_download(num)) for num in patent_nums]
+                tasks.append(limiter_task)
+                
+                # Wait for all tasks with a global timeout
+                try:
+                    async with asyncio.timeout(len(patent_nums) * 2):  # 2 seconds per patent as global timeout
+                        await asyncio.gather(*tasks)
+                except asyncio.TimeoutError:
+                    self.logger.error("Global timeout reached")
+                    raise
+                
+            except Exception as e:
+                self.logger.error(f"Error in download_patents_async: {str(e)}")
+                raise
+            finally:
+                # Cancel any remaining tasks
+                for task in asyncio.all_tasks() - {asyncio.current_task()}:
+                    if not task.done():
+                        task.cancel()
+                
+                # Clean up session
+                if self.session:
+                    await self.session.close()
+                    self.session = None
+                    self.logger.info("Session closed")
+    
+        def download(self, patent_nums):
+            start_time = time.time()
+            self.logger.info(f"Starting download batch of {len(patent_nums)} patents")
+            
+            loop = asyncio.get_event_loop()
+            
+            try:
+                # Add a timeout to the entire operation
+                loop.run_until_complete(
+                    asyncio.wait_for(
+                        self.download_patents_async(patent_nums),
+                        timeout=len(patent_nums) * 2  # 2 seconds per patent as overall timeout
+                    )
+                )
+            except (KeyboardInterrupt, asyncio.TimeoutError) as e:
+                self.logger.warning(f"Operation interrupted: {type(e).__name__}")
+                # Cancel all pending tasks
+                for task in asyncio.all_tasks(loop):
+                    if not task.done():
+                        task.cancel()
+                # Let the loop run one last time to clean up
+                try:
+                    loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(loop), return_exceptions=True))
+                except:
+                    pass  # Ignore any errors during cleanup
+            except Exception as e:
+                self.logger.error(f"Unexpected error: {str(e)}")
+            finally:
+                elapsed_time = time.time() - start_time
+                summary = f"""
+    Download Summary:
+    - Total patents attempted: {len(patent_nums)}
+    - Successful downloads: {self.successful_downloads}
+    - Failed downloads: {self.failed_downloads}
+    - Elapsed time: {elapsed_time:.2f} seconds
+    - Average speed: {self.successful_downloads / max(elapsed_time, 0.001):.2f} patents/second
+    """
+                self.logger.info(summary)
+                print(summary)    
+    
+   # initialize the class
    
+    scraper = GooglePatentsScraper(
+        max_concurrent_requests=50,  # Adjust based on your needs
+        request_delay=0.1  # 100ms between requests
+    )
+    
+    # patent_nums = pnums_to_DL[200000:210000]
+    scraper.download(patent_nums)
+    
+    # scraper.download(patent_nums)
+
+
 def download_patent_HTML(min_year=2019,max_year=2019):
     '''
     For all patents in the "pat_dates_CURRENT.csv" with application years in 
@@ -360,7 +573,7 @@ def download_patent_HTML(min_year=2019,max_year=2019):
     isn't in an HTML folder.    
     '''
     
-    import os, logging
+    import os, logging, subprocess
     import pandas as pd 
     
     # ======================================================================= #
@@ -381,13 +594,6 @@ def download_patent_HTML(min_year=2019,max_year=2019):
     logging.basicConfig(level=logging.INFO,
                         filename=log_fname,
                         format='%(asctime)s - %(message)s')
-
-    # detect years we've DLed files (the parser we use depends on the 
-    # formatting of GPG at the time a given page is downloaded)
-    
-    yS_of_DL = [int(y_path[-4:]) 
-                for y_path in os.listdir('../data/')
-                if y_path[:-4] == 'html_DL_in_' ] 
   
     # df of all patents/appyears applied for in this time period
     # this is a key input, this is the set of patents we will try to parse 
@@ -397,24 +603,75 @@ def download_patent_HTML(min_year=2019,max_year=2019):
     pnum_years_df = pd.read_csv('../data/patent_level_info/pat_dates_CURRENT.csv')\
                    .query("ayear <= @max_year & ayear >= @min_year")    
     
-    # Function to check if the file exists
-    def file_exists(pnum, year):
-        'year is a year we might have downloaded the patent'
-        file_path = f'../data/html_DL_in_{year}/{str(pnum).zfill(8)[:4]}/html_{pnum}.txt'
-        return os.path.exists(file_path)
+    # detect years we've DLed files (the parser we use depends on the 
+    # formatting of GPG at the time a given page is downloaded)
     
-    # List to store pnum with no corresponding files
-    pnums_to_DL = []
+    yS_of_DL = [int(y_path[-4:]) 
+                for y_path in os.listdir('../data/')
+                if y_path[:-4] == 'html_DL_in_' ] 
     
-    # Loop through each row in the DataFrame
-    for pnum in pnum_years_df['pnum'].to_list():
+    # # Function to check if the file exists
+    # def file_exists(pnum, year):
+    #     'year is a year we might have downloaded the patent'
+    #     file_path = f'../data/html_DL_in_{year}/{str(pnum).zfill(8)[:4]}/html_{pnum}.txt'
+    #     return os.path.exists(file_path)
     
-        # Check if the file is found for any of the possible years
-        found_file = any(file_exists(pnum, year) for year in yS_of_DL)
+    # # List to store pnum with no corresponding files
+    # pnums_to_DL = []
+    
+    # # Loop through each row in the DataFrame
+    # for pnum in pnum_years_df['pnum'].to_list():
+    
+    #     # Check if the file is found for any of the possible years
+    #     found_file = any(file_exists(pnum, year) for year in yS_of_DL)
         
-        # If the file is not found for any of the possible years, add pnum to the list
-        if not found_file:
-            pnums_to_DL.append(pnum)
+    #     # If the file is not found for any of the possible years, add pnum to the list
+    #     if not found_file:
+    #         pnums_to_DL.append(pnum)
+        
+    # in 2025, I updated to this:
+    def get_existing_patents(year, base_dir='../data'):
+        """Get patents using fast system commands for either Windows or Unix"""
+        year_dir = f'{base_dir}/html_DL_in_{year}'
+        
+        # Run dir command to get all html_ files recursively
+        # /s is recursive, /b gives bare format (just paths)
+
+        # Choose command based on OS
+        if os.name == 'nt':  # Windows
+            cmd = f'dir /s /b "{year_dir}\\html_*.txt"'
+        else:  # Unix/Mac
+            cmd = f"find '{year_dir}' -name 'html_*.txt'"
+        
+        try:
+            # Run command and get output
+            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+            file_list = result.stdout.splitlines()
+            
+            # Extract patent numbers from filenames
+            patents = set()
+            for filepath in file_list:
+                if filepath:  # Skip empty lines
+                    fname = os.path.basename(filepath)
+                    if fname.startswith('html_') and fname.endswith('.txt'):
+                        pnum = int(fname[5:-4])  # Extract number from 'html_12345.txt'
+                        patents.add(pnum)
+            
+            return patents
+        except subprocess.CalledProcessError as e:
+            print(f"Error running dir command: {e}")
+            return set()
+    
+    # now find all the patents we have already
+    existing_patents = set()
+    for year in yS_of_DL:
+        print(f'Finding existing patent html DLed in {year}')
+        year_patents = get_existing_patents(year)
+        existing_patents.update(year_patents)
+    
+    # Find missing patents using set difference
+    needed_patents = set(pnum_years_df['pnum'])
+    pnums_to_DL = list(needed_patents - existing_patents)
     
     print('Pnums to DL:',len(pnums_to_DL))
     logging.info("DLing HTML for:  %i-%i" % (min_year,max_year))
@@ -992,7 +1249,11 @@ def clean_bags(min_year,max_year):
             # 'frac': [count / n_pats for count in filtered_word_counts.values()]
         }).assign(ayear=yyyy)
 
-        potential_stopwords = potential_stopwords.append(stopwords_this_year)
+        potential_stopwords = (
+                  pd.concat([potential_stopwords,stopwords_this_year],ignore_index=True)
+                 .drop_duplicates(subset=['ayear','word_index'])
+                 .sort_values(['ayear','word_index'])
+                 )
 
         # this is the total set of word_indices to drop:
 
@@ -1010,9 +1271,9 @@ def clean_bags(min_year,max_year):
         
         logging.info('output of '+str(yyyy)+' complete')
         
-    # output potential stopwords             
-    potential_stopwords.to_csv(potential_stop_fname,
-                                index=False)
+        # output potential stopwords             
+        potential_stopwords.to_csv(potential_stop_fname,
+                                    index=False)
 
 
     
@@ -1113,7 +1374,7 @@ def make_RETech(outf,beg=1910,end=2010):
                         )
             
             # append RETech for year t to existing
-            big_RETech = big_RETech.append(RETech)
+            big_RETech = pd.concat([big_RETech,RETech],ignore_index=True)
             
     big_RETech.to_csv(outf,index=False)   
 
@@ -1194,7 +1455,7 @@ def make_breadth(outf,beg=1910,end=2017):
 		
 		# add to the main
 		
-		big_breadth = big_breadth.append(breadth)
+		big_breadth = pd.concat([big_breadth,breadth],ignore_index=True)
 		
 	# done with loop
 	
@@ -1228,13 +1489,13 @@ def ship_outputs(output_dir_name):
     
     df1 = pd.read_csv(in_retech,names=['pnum','RETech','ayear'],
                       header=0,
-                      dtype={'pnum':np.int64,'RETech':np.float,'ayear':np.int64})
+                      dtype={'pnum':np.int64,'RETech':float,'ayear':np.int64})
     
     # breadth
     
     df2 = pd.read_csv(in_breadth,names=['pnum','Breadth'],
                       header=0,
-                      dtype={'pnum':np.int64,'Breadth':np.float})
+                      dtype={'pnum':np.int64,'Breadth':float})
         
     # gyear
     
@@ -1295,7 +1556,11 @@ def ship_outputs(output_dir_name):
 
     # get_title(top_20.iloc[0,-1])
     
-    top_20['title_raw'] = top_20['url'].apply(get_title)
+    raw_titles = [get_title(url) for url in top_20['url']]
+    
+    assert len(raw_titles) == 20
+    
+    top_20['title_raw'] = raw_titles # top_20['url'].apply(get_title)
     
     # format it
     
@@ -1304,7 +1569,8 @@ def ship_outputs(output_dir_name):
     
     # prep before creating table
     
-    top_20['nber'] = top_20.nber.replace(to_replace=[1,2,3,4,5,6],value=["Chemicals","Comps & Commun","Drugs & Medicine", "Electricity","Mechanics","Other"])
+    top_20['nber']  = top_20['nber'].astype(str)
+    top_20['nber'] = top_20.nber.replace(to_replace=["1","2","3","4","5","6"],value=["Chemicals","Comps & Commun","Drugs & Medicine", "Electricity","Mechanics","Other"])
     top_20 = top_20.rename(columns={'nber':'NBER Cat'})
     top_20 = top_20.rename(columns={'ayear':'App Year','gyear':'Grant Year'})
     top_20['Patent'] = '<a href="'+top_20['url'] +'">'+top_20['pnum'].astype(str)+'</a>'    
@@ -1319,7 +1585,6 @@ def ship_outputs(output_dir_name):
     
     html = top_20[['Patent','RETech','NBER Cat','App Year','Grant Year','Title']]\
         .style\
-        .hide_index()\
         .set_properties(subset=['RETech','App Year','Grant Year'],
                         **{'text-align':'center'})\
         .set_properties(subset=['NBER Cat','Patent','Title'],
@@ -1333,7 +1598,8 @@ def ship_outputs(output_dir_name):
             {'selector': 'th.col_heading:nth-child(6)',
                        'props': [('text-align', 'left')]}
             ])\
-        .to_html(doctype_html=True)
+        .to_html(index=False,doctype_html=True)
+        
     
     with open("updated_graphs/top20_pats.html", "w") as text_file:
         text_file.write(html)
@@ -1380,7 +1646,7 @@ def delete_recent_raw_bags():
 
     # only look for pnums in these app years (speeds up lookup)
     min_year = 2010
-    max_year = 2022
+    max_year = 2024
     
     pnum_years_df = pd.read_csv('../data/patent_level_info/pat_dates_CURRENT.csv')\
                    .query("ayear <= @max_year & ayear >= @min_year")   

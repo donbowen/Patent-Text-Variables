@@ -1,8 +1,8 @@
 
 * for figure title/notes:
 
-local through 2019    // what's the latest applcation year in this data?
-local grantsfrom 2022 // what's the latest grants in this data
+local through 2021    // what's the latest applcation year in this data?
+local grantsfrom 2024 // what's the latest grants in this data
 
 ********************************************************************************	
 * load util funcs	
@@ -221,17 +221,17 @@ local grantsfrom 2022 // what's the latest grants in this data
 	
 *** load data and prep to plot
 	
-	cd "../outputs 2023-07/" // unzipfile copies into cd by default, so move cd
+	cd "../outputs 2025-02/" // unzipfile copies into cd by default, so move cd
 	
 	unzipfile Pat_text_vars_NotWinsored.zip, replace
 	
 	import delim using Pat_text_vars_NotWinsored.csv, clear
 	
-	* winsorize
+	* winsorize - skip for speed outliers do not impact these charts 
 	
-	winsorby retech, by(ayear) p(0.01) // yuck, slow	
-	drop retech 
-	rename w_retech retech
+	*winsorby retech, by(ayear) p(0.01) // yuck, slow	
+	*drop retech 
+	*rename w_retech retech
 		
 	* so we can compute for each tech area	
 	
@@ -252,29 +252,29 @@ local grantsfrom 2022 // what's the latest grants in this data
 		
 * fig: overall
 	
-	local lineparts ayear if ayear >= 1930 & ayear <= 2020, c(L) lp(solid)   lcolor(black) lw(thick) ms(i) mlab() mlabpos(9) mlabs(large) mlabc(black)
+	local lineparts ayear if ayear >= 1930 & ayear <= `through', c(L) lp(solid)   lcolor(black) lw(thick) ms(i) mlab() mlabpos(9) mlabs(large) mlabc(black)
 	twoway (line retech `lineparts') , ///
 		title("Updated RETech through `through'", size( vlarge )) ytitle("") xtitle("") legend(off) ///
 		xlabel(1930 (10) 2020 ,  labs(large)   ) ///
 		ylabel(, labs(large) angle(horizontal) glcolor(p2%10)  ) ///
 		graphregion(color(white) lwidth(medium)) ///
-		note(" " "{bf:Note:}      The RETech index is based all patents {bf:applied} for in a given year." "{bf:Sample:} Patents granted by Dec 31 `2022'.",)
+		note(" " "{bf:Note:}      The RETech index is based all patents {bf:applied} for in a given year." "{bf:Sample:} Patents granted by Dec 31 `grantsfrom'")
 	graph display , ysize(4) xsize(6)
 	graph export "../code/updated_graphs/RETech-1930.png", replace		
 
 * fig: by category	
 	
-	{		
+	{	
 		local varnum 1 // will loop over variable labels, explicitly increment var name numbering
 		foreach category in "Chemicals" "Comps & Commun" "Drugs & Medicine" "Electricity" "Mechanics" "Other" {
 			local graph_name = lower(substr(`"`category'"',1,2)) //
 			di  "varnum `varnum' name `graph_name' label `category'"
 			
 			if `varnum' > 3 {
-				local xlab xlabel(1930 (20) 2020 ,  labs(large) angle(vertical) grid )
+				local xlab xlabel(1930 (10) 2020 ,  labs(large) angle(vertical) grid )
 			}
 			else {
-				local xlab 	xlabel(1930 (20) 2020,grid)		xscale(off fill) 
+				local xlab 	xlabel(1930 (10) 2020,grid)		xscale(off fill) 
 			}
 			if `varnum' == 1 | `varnum' == 4 {
 				local ylab ylabel(, angle(horizontal)  glcolor(p2%10)  labs(large) format(%9.0g) )
@@ -284,10 +284,10 @@ local grantsfrom 2022 // what's the latest grants in this data
 			}
 			
 			twoway  /// plot all in gray 
-					(line retech_nber_*        ayear if ayear >= 1930 & ayear <= 2020 ///
+					(line retech_nber_*        ayear if ayear >= 1930 & ayear <= `through' ///
 						, lpattern(solid) lwidth(medium) lcolor(gray gray gray gray gray gray)) ///
 					/// plot focus on one variable
-					(line retech_nber_`varnum' ayear if ayear >= 1930 & ayear <= 2020 ///
+					(line retech_nber_`varnum' ayear if ayear >= 1930 & ayear <= `through' ///
 						, lpattern(solid) lwidth(vthick) lcolor(blue))  ///
 					/// options
 					, title("`category'", color(black)) legend(off) ytitle("") xtitle("") ///

@@ -32,12 +32,12 @@ within dir! If you cloned/downloaded the repo, this is taken care of.
 # and i'm not doing a GLFS workaround
 # so I store them in folders with the date of the update (oh yeah...)
 
-output_dir_name  = 'outputs 2023-07' # update to new me each update to save 
+output_dir_name  = 'outputs 2025-02' # update to new me each update to save 
                                      # prior outputs (for error checks, etc)
 
 # get DLs and parse files in these application years
 update_from = 2010        
-update_to   = 2022
+update_to   = 2024
 
 # The latest app year to compute retech/breadth. 
 # I usually lag given examination/approval lags
