@@ -10,6 +10,7 @@ stop // a lazy way to prevent running the downloads when I hit CTRL+D
 ////////////////////////////////////////////////////////////////////////////////
 
 *** 1. from WRDS: download the CCM-CRSP linking table (LC and LU), call it "wrds_link_table.csv"
+	* https://wrds-www.wharton.upenn.edu/pages/get-data/center-research-security-prices-crsp/annual-update/crspcompustat-merged/compustat-crsp-link/
 
 	import delimited "wrds_link_table.csv", delimiter(comma) varnames(1) rowrange(2) clear
 	rename lpermco permco
@@ -19,8 +20,11 @@ stop // a lazy way to prevent running the downloads when I hit CTRL+D
 
 *** 2. update URLS here if they changed 
 
-	local url_permco "https://github.com/KPSS2017/Technological-Innovation-Resource-Allocation-and-Growth-Extended-Data/blob/master/patent_permco_permno_match_public_2020.csv.zip?raw=true"
-	local url_appdate "https://github.com/KPSS2017/Technological-Innovation-Resource-Allocation-and-Growth-Extended-Data/blob/master/KPSS_2020_public.csv.zip?raw=true"
+	local permco_fname  "Match_patent_permco_permno_2023"
+	local appdate_fname "KPSS_2023"
+
+	local url_permco "https://github.com/KPSS2017/Technological-Innovation-Resource-Allocation-and-Growth-Extended-Data/blob/master/`permco_fname'.csv.zip?raw=true"
+	local url_appdate "https://github.com/KPSS2017/Technological-Innovation-Resource-Allocation-and-Growth-Extended-Data/blob/master/`appdate_fname'.csv.zip?raw=true"
 	
 ////////////////////////////////////////////////////////////////////////////////
 // download the patent permco link (a recent and comprehensive job)
@@ -38,22 +42,23 @@ stop // a lazy way to prevent running the downloads when I hit CTRL+D
 ////////////////////////////////////////////////////////////////////////////////
 
 	 // download to cwd  
-	copy "`url_appdate'" KPSS_2020_public.csv.zip  
+	copy "`url_appdate'" `appdate_fname'.csv.zip  
 
 	// unzip in cwd  
-	unzipfile KPSS_2020_public.csv.zip  
+	unzipfile `appdate_fname'.csv.zip  
 	
 	// clean and format it
-	import delimited "KPSS_2020_public.csv", delimiter(comma) varnames(1) clear
-	g appdate = date(filing_date,"MDY")
+	import delimited "`appdate_fname'.csv", delimiter(comma) varnames(1) clear
+	tostring filing_date, replace
+	g appdate = date(filing_date,"YMD")
 	keep patent_num appdate
-	save pnum_appdate
+	save pnum_appdate, replace
 	
 ////////////////////////////////////////////////////////////////////////////////
 // convert permco to gvkey
 ////////////////////////////////////////////////////////////////////////////////
 
-	import delimited "patent_permco_permno_match_public_2020.csv", delimiter(comma) varnames(1) clear
+	import delimited "`permco_fname'.csv", delimiter(comma) varnames(1) clear
 	drop permno // use permco
 		
 	merge m:m permco using wrds_link_table, keep(3) nogen
@@ -117,4 +122,6 @@ stop // a lazy way to prevent running the downloads when I hit CTRL+D
 	rename patent_num pnum // our naming convention
 	export delim using "pnum_gvkey.csv", replace
 	zipfile "pnum_gvkey.csv" , saving(pnum_gvkey, replace)
+	
+	cap erase  "../../pnum_gvkey.zip" 
 	copy "pnum_gvkey.zip" "../../pnum_gvkey.zip" 
